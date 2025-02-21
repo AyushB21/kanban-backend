@@ -1,43 +1,45 @@
-package main
+
+package database
 
 import (
 	"log"
-	"os"
-	"taskmanager/database"
-	"taskmanager/routes"
-	"time"
 
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
-func main() {
-	// Load database URL from environment variables
-	dbURL := os.Getenv("DATABASE_URL")
-	if dbURL == "" {
-		log.Fatal("❌ DATABASE_URL is not set. Please configure it in your environment.")
+var DB *gorm.DB
+
+func InitDB(dbURL string) {
+	var err error
+	DB, err = gorm.Open(postgres.Open(dbURL), &gorm.Config{})
+	if err != nil {
+		log.Fatal("❌ Failed to connect to database:", err)
 	}
 
-	// Initialize the database
-	database.InitDB(dbURL)
+	log.Println("✅ Successfully connected to PostgreSQL!")
 
-	// Create a new Gin router
-	r := gin.Default()
+	// Auto-migrate database tables
+	err = DB.AutoMigrate(&Task{}, &User{})
+	if err != nil {
+		log.Fatal("❌ Failed to migrate database tables:", err)
+	}
+}
 
-	// Enable CORS
-	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"*"}, // Change "*" to your frontend URL in production
-		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
-	}))
+// Task Model
+type Task struct {
+	gorm.Model
+	Title       string `gorm:"not null"`
+	Description string
+	Status      string `gorm:"default:pending"`
+	Column      string `gorm:"default:To Do"`
+	Assignee    string
+}
 
-	// Setup API routes
-	routes.SetupRoutes(r)
-
-	// Start the server
-	log.Println("✅ Server running on port 8080")
-	r.Run(":8080")
+// User Model
+type User struct {
+	gorm.Model
+	Name     string `gorm:"not null"`
+	Email    string `gorm:"unique;not null"`
+	Password string `gorm:"not null"`
 }
