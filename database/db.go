@@ -1,50 +1,44 @@
 package database
 
 import (
-	"database/sql"
 	"log"
 
-	_ "modernc.org/sqlite" // ✅ Use modernc.org/sqlite instead of go-sqlite3
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
-var DB *sql.DB
+var DB *gorm.DB
 
-func InitDB() {
+func InitDB(dbURL string) {
 	var err error
-	DB, err = sql.Open("sqlite", "kanban.db") // ✅ Use "sqlite" instead of "sqlite3"
+	DB, err = gorm.Open(postgres.Open(dbURL), &gorm.Config{})
 	if err != nil {
-		log.Fatal("Failed to connect to database:", err)
+		log.Fatal("❌ Failed to connect to database:", err)
 	}
 
-	// Create tasks table
-	createTasksTableQuery := `
-	CREATE TABLE IF NOT EXISTS tasks (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		title TEXT NOT NULL,
-		description TEXT,
-		status TEXT DEFAULT 'pending',
-		column TEXT DEFAULT 'To Do',
-		assignee TEXT
-	);
-	`
-	_, err = DB.Exec(createTasksTableQuery)
-	if err != nil {
-		log.Fatal("Failed to create tasks table:", err)
-	}
+	log.Println("✅ Successfully connected to PostgreSQL!")
 
-	// ✅ Add users table for authentication
-	createUsersTableQuery := `
-	CREATE TABLE IF NOT EXISTS users (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		name TEXT NOT NULL,
-		email TEXT UNIQUE NOT NULL,
-		password TEXT NOT NULL
-	);
-	`
-	_, err = DB.Exec(createUsersTableQuery)
+	// Auto-migrate database tables
+	err = DB.AutoMigrate(&Task{}, &User{})
 	if err != nil {
-		log.Fatal("Failed to create users table:", err)
+		log.Fatal("❌ Failed to migrate database tables:", err)
 	}
+}
 
-	log.Println("Connected to SQLite database and ensured required tables exist!")
+// Task Model
+type Task struct {
+	gorm.Model
+	Title       string `gorm:"not null"`
+	Description string
+	Status      string `gorm:"default:pending"`
+	Column      string `gorm:"default:To Do"`
+	Assignee    string
+}
+
+// User Model
+type User struct {
+	gorm.Model
+	Name     string `gorm:"not null"`
+	Email    string `gorm:"unique;not null"`
+	Password string `gorm:"not null"`
 }
