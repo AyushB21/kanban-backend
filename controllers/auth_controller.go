@@ -1,8 +1,6 @@
 package controllers
 
 import (
-	"database/sql"
-	"log"
 	"net/http"
 	"taskmanager/database"
 	"taskmanager/models"
@@ -19,18 +17,17 @@ func RegisterUser(c *gin.Context) {
 		return
 	}
 
-	// Hash the password before storing
+	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
 		return
 	}
+	user.Password = string(hashedPassword)
 
-	// Insert user into the database
-	query := `INSERT INTO users (name, email, password) VALUES (?, ?, ?)`
-	_, err = database.DB.Exec(query, user.Name, user.Email, string(hashedPassword))
-	if err != nil {
-		log.Println("Error inserting user:", err)
+	// Save user in database
+	result := database.DB.Create(&user)
+	if result.Error != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 		return
 	}
@@ -48,20 +45,14 @@ func LoginUser(c *gin.Context) {
 		return
 	}
 
-	// Retrieve user from the database
-	query := `SELECT id, name, email, password FROM users WHERE email = ?`
-	err := database.DB.QueryRow(query, input.Email).Scan(&storedUser.ID, &storedUser.Name, &storedUser.Email, &storedUser.Password)
-	if err == sql.ErrNoRows {
+	// Find user by email
+	if err := database.DB.Where("email = ?", input.Email).First(&storedUser).Error; err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
-		return
-	} else if err != nil {
-		log.Println("Database error:", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
 		return
 	}
 
-	// Compare stored hashed password with provided password
-	err = bcrypt.CompareHashAndPassword([]byte(storedUser.Password), []byte(input.Password))
+	// Compare passwords
+	err := bcrypt.CompareHashAndPassword([]byte(storedUser.Password), []byte(input.Password))
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
