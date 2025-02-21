@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 	"taskmanager/database"
 	"taskmanager/routes"
 	"time"
@@ -11,8 +12,14 @@ import (
 )
 
 func main() {
+	// Load database URL from environment variables
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		log.Fatal("❌ DATABASE_URL is not set. Please configure it in your environment.")
+	}
+
 	// Initialize the database
-	database.InitDB()
+	database.InitDB(dbURL)
 
 	// Create a new Gin router
 	r := gin.Default()
@@ -31,6 +38,6 @@ func main() {
 	routes.SetupRoutes(r)
 
 	// Start the server
-	log.Println("Server running on port 8080")
+	log.Println("✅ Server running on port 8080")
 	r.Run(":8080")
 }
