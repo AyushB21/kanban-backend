@@ -1,45 +1,43 @@
-
-package database
+package main
 
 import (
 	"log"
+	"os"
+	"taskmanager/database"
+	"taskmanager/routes"
+	"time"
 
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 )
 
-var DB *gorm.DB
+func main() {
+	// Initialize the database
+	database.InitDB(os.Getenv("DATABASE_URL")) // Read DB URL from env variable
 
-func InitDB(dbURL string) {
-	var err error
-	DB, err = gorm.Open(postgres.Open(dbURL), &gorm.Config{})
-	if err != nil {
-		log.Fatal("❌ Failed to connect to database:", err)
+	// Create a new Gin router
+	r := gin.Default()
+
+	// Enable CORS
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+
+	// Setup API routes
+	routes.SetupRoutes(r)
+
+	// Get the PORT from the environment (Render assigns it dynamically)
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080" // Default to 8080 if PORT is not set
 	}
 
-	log.Println("✅ Successfully connected to PostgreSQL!")
-
-	// Auto-migrate database tables
-	err = DB.AutoMigrate(&Task{}, &User{})
-	if err != nil {
-		log.Fatal("❌ Failed to migrate database tables:", err)
-	}
-}
-
-// Task Model
-type Task struct {
-	gorm.Model
-	Title       string `gorm:"not null"`
-	Description string
-	Status      string `gorm:"default:pending"`
-	Column      string `gorm:"default:To Do"`
-	Assignee    string
-}
-
-// User Model
-type User struct {
-	gorm.Model
-	Name     string `gorm:"not null"`
-	Email    string `gorm:"unique;not null"`
-	Password string `gorm:"not null"`
+	// Start the server
+	log.Println("🚀 Server running on port " + port)
+	r.Run(":" + port)
 }
