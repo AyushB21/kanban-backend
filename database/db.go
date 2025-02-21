@@ -2,6 +2,7 @@ package database
 
 import (
 	"log"
+	"taskmanager/models"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -19,26 +20,8 @@ func InitDB(dbURL string) {
 	log.Println("✅ Successfully connected to PostgreSQL!")
 
 	// Auto-migrate database tables
-	err = DB.AutoMigrate(&Task{}, &User{})
+	err = DB.AutoMigrate(&models.Task{}, &models.User{})
 	if err != nil {
 		log.Fatal("❌ Failed to migrate database tables:", err)
 	}
-}
-
-// Task Model
-type Task struct {
-	gorm.Model
-	Title       string `gorm:"not null"`
-	Description string
-	Status      string `gorm:"default:pending"`
-	Column      string `gorm:"default:To Do"`
-	Assignee    string
-}
-
-// User Model
-type User struct {
-	gorm.Model
-	Name     string `gorm:"not null"`
-	Email    string `gorm:"unique;not null"`
-	Password string `gorm:"not null"`
 }
