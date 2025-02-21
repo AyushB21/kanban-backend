@@ -6,11 +6,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRoutes(router *gin.Engine) {
-	router.POST("/signup", controllers.RegisterUser) // ✅ Add signup route
-	router.POST("/signin", controllers.LoginUser) // ✅ Add signin route
+func SetupRoutes(r *gin.Engine) {
+	api := r.Group("/api")
 
-	router.POST("/tasks", controllers.CreateTask)
-	router.GET("/tasks", controllers.GetTasks)
-	router.PUT("/tasks/:id/move", controllers.MoveTask)
+	// Auth routes
+	api.POST("/register", controllers.RegisterUser)
+	api.POST("/login", controllers.LoginUser)
+
+	// Task routes
+	api.POST("/tasks", controllers.CreateTask)
+	api.GET("/tasks", controllers.GetTasks)
+	api.PATCH("/tasks/:id", controllers.MoveTask)
 }
